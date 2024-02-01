@@ -89,6 +89,9 @@ void setup() {
   if(ssid != "null" && passwd != "null"){
     WiFi.begin(ssid.c_str(),passwd.c_str());
   }
+  // Setup WebSocket
+  webSocket.begin();
+  webSocket.onEvent(webSocketEvent);
 }
 
 void setupMDNS(){
