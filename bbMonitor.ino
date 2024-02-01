@@ -3,6 +3,8 @@
 #include <WiFi.h>
 #include <WebSocketsServer.h>
 #include <ArduinoJson.h>
+#include <NeoPixelBus.h>
+#include <NeoPixelAnimator.h>
 
 #define P1 38
 #define P2 5
@@ -23,6 +25,40 @@
 #define P17 35
 #define P18 36
 const int pins[] = {P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15, P16, P17, P18};
+// Map pinIndex to NeoPixel strips and pixel index
+int pinToPixelMap[] = {
+  0, 1,  // strip 1, P1
+  2, 3,  // strip 1, P2
+  4, 5,  // strip 1, P3
+  6, 7,  // strip 1, P4
+  8, 9,  // strip 1, P5
+  10, 8,  // strip 1, P6
+  9, 10, // strip 1, P7
+  10, 11,// strip 1, P8
+  12, 13,// strip 1, P9
+
+  0, 1,  // strip 2, P10
+  2, 3,  // strip 2, P11
+  4, 5,  // strip 2, P12
+  6, 7,  // strip 2, P13
+  8, 9,  // strip 2, P14
+  10, 11,// strip 2, P15
+  12, 13 // strip 2, P16
+};
+
+#define LINES 2
+#define EACH_PIXEL_COUNT 2
+int cols = sizeof(pins) / sizeof(pins[0]) / LINES;
+
+#define STRIP1_PIN    5   // Example pin for strip 1, replace with your actual pin
+#define STRIP2_PIN    6   // Example pin for strip 2, replace with your actual pin
+#define PIXEL_COUNT   14  // Replace with the actual number of NeoPixels per strip
+
+NeoPixelBus<NeoGrbFeature, NeoEsp32BitBang800KbpsMethod> strip1(PIXEL_COUNT, STRIP1_PIN);
+NeoPixelBus<NeoGrbFeature, NeoEsp32BitBang800KbpsMethod> strip2(PIXEL_COUNT, STRIP2_PIN);
+
+NeoPixelAnimator animations1(PIXEL_COUNT);
+NeoPixelAnimator animations2(PIXEL_COUNT);
 
 #define MAX 250
 
@@ -62,12 +98,19 @@ void handleWebSocketText(uint8_t *payload, size_t length) {
 
       // Check if the pin index is within the valid range
       if (pinIndex >= 0 && pinIndex < sizeof(pins) / sizeof(pins[0])) {
-        int pinValue = kv.value();
-        analogWrite(pins[pinIndex], pinValue);
+        float pinValue = kv.value();
+        analogWrite(pins[pinIndex], MAX * pinValue);
         Serial.print("Set PWM value for Pin ");
         Serial.print(pinName);
         Serial.print(" to ");
         Serial.println(pinValue);
+        
+        // Determine the strip and pixel index based on pinIndex
+        int stripIndex = pinIndex < cols ? 0 : 1;
+        int pixelIndex = (pinIndex & cols - 1) * EACH_PIXEL_COUNT;
+
+        // Set NeoPixel animation based on pinValue
+        setNeoPixelAnimation(stripIndex, pixelIndex, pinValue);
       } else {
         Serial.println("Invalid Pin: " + pinName);
       }
@@ -89,6 +132,11 @@ void setup() {
   if(ssid != "null" && passwd != "null"){
     WiFi.begin(ssid.c_str(),passwd.c_str());
   }
+
+  // Setup LED
+  strip1.Begin();
+  strip2.Begin();
+
   // Setup WebSocket
   webSocket.begin();
   webSocket.onEvent(webSocketEvent);
@@ -108,4 +156,32 @@ void loop() {
   // put your main code here, to run repeatedly:
   if(!mdnsOn) setupMDNS();
   webSocket.loop();
+  animations1.UpdateAnimations();
+  animations2.UpdateAnimations();
+}
+
+void setNeoPixelAnimation(int stripIndex, int pixelIndex, float pinValue) {
+  // Define animation parameters
+  RgbColor green(0, 255, 0);
+  RgbColor red(255, 0, 0);
+  
+  // Calculate color based on pinValue
+  RgbColor targetColor = RgbColor::LinearBlend(green, red, pinValue);
+
+  // Set animation
+  if (stripIndex == 0) {
+    animations1.StartAnimation(pixelIndex, 500, [targetColor, green, pixelIndex](const AnimationParam& param) {
+      RgbColor color = RgbColor::LinearBlend(green, targetColor, param.progress);
+      for(int i = 0; i < EACH_PIXEL_COUNT; i ++) {
+        strip1.SetPixelColor(pixelIndex + i, color);
+      }
+    });
+  } else {
+    animations2.StartAnimation(pixelIndex, 500, [targetColor, green, pixelIndex](const AnimationParam& param) {
+      RgbColor color = RgbColor::LinearBlend(green, targetColor, param.progress);
+      for(int i = 0; i < EACH_PIXEL_COUNT; i ++) {
+        strip2.SetPixelColor(pixelIndex + i, color);
+      }
+    });
+  }
 }
