@@ -1,7 +1,7 @@
 #include <Preferences.h>
 #include <ESPmDNS.h>
 #include <WiFi.h>
-#include <WebSocketsServer.h>
+#include <WebSocketsServer.h> //https://github.com/Links2004/arduinoWebSockets
 #include <ArduinoJson.h>
 #include <NeoPixelBus.h>
 #include <NeoPixelAnimator.h>
@@ -87,21 +87,19 @@ void handleWebSocketText(uint8_t *payload, size_t length) {
 
   // Check if the "data" key exists
   if (jsonDoc.containsKey("data")) {
-    JsonObject data = jsonDoc["data"];
-
-    // Iterate through keys in "data" and set analogWrite values for defined pins
-    for (JsonPair kv : data) {
-      String pinName = kv.key().c_str();
-
-      // Find the corresponding pin based on the key
-      int pinIndex = pinName.substring(1).toInt() - 1;
-
-      // Check if the pin index is within the valid range
-      if (pinIndex >= 0 && pinIndex < sizeof(pins) / sizeof(pins[0])) {
-        float pinValue = kv.value();
+    JsonArray data = jsonDoc["data"];
+    Serial.println(data);
+    
+    // Iterate through the array and set analogWrite values for defined pins
+    for (int i = 0; i < data.size(); i++) {
+      // Ensure pinIndex is within bounds
+      if (i < sizeof(pins) / sizeof(pins[0])) {
+        float pinValue = data[i].as<float>(); // Extract the value from the array element
+        int pinIndex = i;
+        
         analogWrite(pins[pinIndex], MAX * pinValue);
         Serial.print("Set PWM value for Pin ");
-        Serial.print(pinName);
+        Serial.print("P" + String(pinIndex + 1)); // Pin names start from P1
         Serial.print(" to ");
         Serial.println(pinValue);
         
@@ -112,10 +110,11 @@ void handleWebSocketText(uint8_t *payload, size_t length) {
         // Set NeoPixel animation based on pinValue
         setNeoPixelAnimation(stripIndex, pixelIndex, pinValue);
       } else {
-        Serial.println("Invalid Pin: " + pinName);
+        Serial.println("Invalid Pin Index: " + String(i));
       }
     }
-  } else {
+}
+ else {
     Serial.println("No 'data' key found in JSON");
   }
 }
