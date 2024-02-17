@@ -124,6 +124,12 @@ void setup() {
   // put your setup code here, to run once:
   pinMode(P1,OUTPUT);
   pinMode(P2,OUTPUT);
+  pinMode(P3,OUTPUT);
+  pinMode(P4,OUTPUT);
+  pinMode(P5,OUTPUT);
+  pinMode(P6,OUTPUT);
+  pinMode(P7,OUTPUT);
+  pinMode(P8,OUTPUT);
 
   //Setup WiFi
   String ssid = preferences.getString("ssid","Hollyshit_A");
