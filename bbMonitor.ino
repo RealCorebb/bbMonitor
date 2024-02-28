@@ -24,7 +24,7 @@
 #define P16 21
 #define P17 35
 #define P18 36
-const int pins[] = {P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15, P16, P17, P18};
+const int pins[] = {P1, P2, P3, P4, P5, P6, P7, P8};
 // Map pinIndex to NeoPixel strips and pixel index
 int pinToPixelMap[] = {
   0, 1,  // strip 1, P1
@@ -50,15 +50,17 @@ int pinToPixelMap[] = {
 #define EACH_PIXEL_COUNT 2
 int cols = sizeof(pins) / sizeof(pins[0]) / LINES;
 
-#define STRIP1_PIN    5   // Example pin for strip 1, replace with your actual pin
-#define STRIP2_PIN    6   // Example pin for strip 2, replace with your actual pin
-#define PIXEL_COUNT   14  // Replace with the actual number of NeoPixels per strip
+#define STRIP1_PIN    39   // Example pin for strip 1, replace with your actual pin
+#define STRIP2_PIN    40   // Example pin for strip 2, replace with your actual pin
+#define PIXEL_COUNT   8  // Replace with the actual number of NeoPixels per strip
 
-NeoPixelBus<NeoGrbFeature, NeoEsp32BitBang800KbpsMethod> strip1(PIXEL_COUNT, STRIP1_PIN);
-NeoPixelBus<NeoGrbFeature, NeoEsp32BitBang800KbpsMethod> strip2(PIXEL_COUNT, STRIP2_PIN);
+NeoPixelBus<NeoGrbFeature, NeoEsp32Rmt1Ws2812xMethod> strip1(PIXEL_COUNT, STRIP1_PIN);
+NeoPixelBus<NeoGrbFeature, NeoEsp32Rmt2Ws2812xMethod> strip2(PIXEL_COUNT, STRIP2_PIN);
 
 NeoPixelAnimator animations1(PIXEL_COUNT);
 NeoPixelAnimator animations2(PIXEL_COUNT);
+
+AnimEaseFunction easing = NeoEase::CubicIn;
 
 #define MAX 250
 
@@ -98,6 +100,7 @@ void handleWebSocketText(uint8_t *payload, size_t length) {
         int pinIndex = i;
         
         analogWrite(pins[pinIndex], MAX * pinValue);
+        
         Serial.print("Set PWM value for Pin ");
         Serial.print("P" + String(pinIndex + 1)); // Pin names start from P1
         Serial.print(" to ");
@@ -141,6 +144,13 @@ void setup() {
   // Setup LED
   strip1.Begin();
   strip2.Begin();
+  RgbColor color = RgbColor(25, 25, 255);
+  for(int i = 0; i < PIXEL_COUNT; i ++) {
+    strip1.SetPixelColor(i, color);
+    strip2.SetPixelColor(i, color);
+  }
+  strip1.Show();
+  strip2.Show();
 
   // Setup WebSocket
   webSocket.begin();
@@ -163,6 +173,8 @@ void loop() {
   webSocket.loop();
   animations1.UpdateAnimations();
   animations2.UpdateAnimations();
+  strip1.Show();
+  strip2.Show();
 }
 
 void setNeoPixelAnimation(int stripIndex, int pixelIndex, float pinValue) {
@@ -172,18 +184,21 @@ void setNeoPixelAnimation(int stripIndex, int pixelIndex, float pinValue) {
   
   // Calculate color based on pinValue
   RgbColor targetColor = RgbColor::LinearBlend(green, red, pinValue);
-
   // Set animation
   if (stripIndex == 0) {
-    animations1.StartAnimation(pixelIndex, 500, [targetColor, green, pixelIndex](const AnimationParam& param) {
-      RgbColor color = RgbColor::LinearBlend(green, targetColor, param.progress);
-      for(int i = 0; i < EACH_PIXEL_COUNT; i ++) {
-        strip1.SetPixelColor(pixelIndex + i, color);
-      }
-    });
+    AnimUpdateCallback animUpdate = [=](const AnimationParam& param)
+      {
+          float progress = easing(param.progress);
+          RgbColor color = RgbColor::LinearBlend(strip1.GetPixelColor(pixelIndex), targetColor, progress);
+          for(int i = 0; i < EACH_PIXEL_COUNT; i ++) {
+            Serial.println(pixelIndex + i);
+            strip1.SetPixelColor(pixelIndex + i, color);
+          }
+      };
+    animations1.StartAnimation(pixelIndex, 1500, animUpdate);
   } else {
-    animations2.StartAnimation(pixelIndex, 500, [targetColor, green, pixelIndex](const AnimationParam& param) {
-      RgbColor color = RgbColor::LinearBlend(green, targetColor, param.progress);
+    animations2.StartAnimation(pixelIndex, 1500, [targetColor, pixelIndex](const AnimationParam& param) {
+      RgbColor color = RgbColor::LinearBlend(strip2.GetPixelColor(pixelIndex), targetColor, param.progress);
       for(int i = 0; i < EACH_PIXEL_COUNT; i ++) {
         strip2.SetPixelColor(pixelIndex + i, color);
       }
