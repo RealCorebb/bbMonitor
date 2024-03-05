@@ -203,7 +203,6 @@ void setNeoPixelAnimation(int stripIndex, int pixelIndex, float pinValue) {
           float progress = easing(param.progress);
           RgbColor color = RgbColor::LinearBlend(strip1.GetPixelColor(pixelIndex), targetColor, progress);
           for(int i = 0; i < EACH_PIXEL_COUNT; i ++) {
-            Serial.println(pixelIndex + i);
             strip1.SetPixelColor(pixelIndex + i, color);
           }
       };
