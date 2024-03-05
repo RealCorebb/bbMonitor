@@ -1,7 +1,7 @@
 #include <Preferences.h>
 #include <ESPmDNS.h>
 #include <WiFi.h>
-#include <WebSocketsServer.h> //https://github.com/Links2004/arduinoWebSockets
+#include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
 #include <NeoPixelBus.h>
 #include <NeoPixelAnimator.h>
@@ -25,26 +25,6 @@
 #define P17 35
 #define P18 36
 const int pins[] = {P1, P2, P3, P4, P5, P6, P7, P8};
-// Map pinIndex to NeoPixel strips and pixel index
-int pinToPixelMap[] = {
-  0, 1,  // strip 1, P1
-  2, 3,  // strip 1, P2
-  4, 5,  // strip 1, P3
-  6, 7,  // strip 1, P4
-  8, 9,  // strip 1, P5
-  10, 8,  // strip 1, P6
-  9, 10, // strip 1, P7
-  10, 11,// strip 1, P8
-  12, 13,// strip 1, P9
-
-  0, 1,  // strip 2, P10
-  2, 3,  // strip 2, P11
-  4, 5,  // strip 2, P12
-  6, 7,  // strip 2, P13
-  8, 9,  // strip 2, P14
-  10, 11,// strip 2, P15
-  12, 13 // strip 2, P16
-};
 
 #define LINES 2
 #define EACH_PIXEL_COUNT 2
@@ -67,13 +47,26 @@ AnimEaseFunction easing = NeoEase::CubicIn;
 Preferences preferences;
 bool mdnsOn = false;
 
-WebSocketsServer webSocket = WebSocketsServer(80);
+AsyncWebServer server(80);
+AsyncWebSocket ws("/");
 
-void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
-  switch(type) {
-    case WStype_TEXT:
-      handleWebSocketText(payload, length);
-      break;
+void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
+  AwsFrameInfo *info = static_cast<AwsFrameInfo*>(arg);
+  static String message;
+
+  if (info->index == 0) {
+    // This is a new message, clear our message string
+    message = "";
+  }
+
+  // Append the data from this frame to our message
+  for(size_t i=0; i<len; i++) {
+    message += (char)data[i];
+  }
+
+  if (info->final) {
+    // The final frame has been received, process the message
+    handleWebSocketText((uint8_t *)message.c_str(), message.length());
   }
 }
 
@@ -122,6 +115,25 @@ void handleWebSocketText(uint8_t *payload, size_t length) {
   }
 }
 
+void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type,
+             void *arg, uint8_t *data, size_t len) {
+  switch (type) {
+    case WS_EVT_CONNECT:
+      Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+      ws.cleanupClients();
+      break;
+    case WS_EVT_DISCONNECT:
+      Serial.printf("WebSocket client #%u disconnected\n", client->id());
+      break;
+    case WS_EVT_DATA:
+      handleWebSocketMessage(arg, data, len);
+      break;
+    case WS_EVT_PONG:
+    case WS_EVT_ERROR:
+      break;
+  }
+}
+
 void setup() {
   Serial.begin(115200);
   // put your setup code here, to run once:
@@ -153,8 +165,9 @@ void setup() {
   strip2.Show();
 
   // Setup WebSocket
-  webSocket.begin();
-  webSocket.onEvent(webSocketEvent);
+  ws.onEvent(onEvent);
+  server.addHandler(&ws);
+  server.begin();
 }
 
 void setupMDNS(){
@@ -170,7 +183,6 @@ void setupMDNS(){
 void loop() {
   // put your main code here, to run repeatedly:
   if(!mdnsOn) setupMDNS();
-  webSocket.loop();
   animations1.UpdateAnimations();
   animations2.UpdateAnimations();
   strip1.Show();
