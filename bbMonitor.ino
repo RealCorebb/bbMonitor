@@ -114,6 +114,8 @@ void handleWebSocketText(uint8_t *payload, size_t length) {
     //write the entire json.config string to the preferences config
     strip1.SetLuminance(jsonDoc["config"]["brightNess"].as<int>());
     strip2.SetLuminance(jsonDoc["config"]["brightNess"].as<int>());
+    strip1.Show();
+    strip2.Show();
     preferences.putString("config", jsonDoc["config"].as<String>());  
  }
  else {
