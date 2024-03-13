@@ -3,7 +3,7 @@
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
-#include <NeoPixelBus.h>
+#include <NeoPixelBusLg.h>
 #include <NeoPixelAnimator.h>
 
 #define P1 38
@@ -34,8 +34,8 @@ int cols = sizeof(pins) / sizeof(pins[0]) / LINES;
 #define STRIP2_PIN    40   // Example pin for strip 2, replace with your actual pin
 #define PIXEL_COUNT   8  // Replace with the actual number of NeoPixels per strip
 
-NeoPixelBus<NeoGrbFeature, NeoEsp32Rmt1Ws2812xMethod> strip1(PIXEL_COUNT, STRIP1_PIN);
-NeoPixelBus<NeoGrbFeature, NeoEsp32Rmt2Ws2812xMethod> strip2(PIXEL_COUNT, STRIP2_PIN);
+NeoPixelBusLg<NeoGrbFeature, NeoEsp32Rmt1Ws2812xMethod> strip1(PIXEL_COUNT, STRIP1_PIN);
+NeoPixelBusLg<NeoGrbFeature, NeoEsp32Rmt2Ws2812xMethod> strip2(PIXEL_COUNT, STRIP2_PIN);
 
 NeoPixelAnimator animations1(PIXEL_COUNT);
 NeoPixelAnimator animations2(PIXEL_COUNT);
@@ -156,6 +156,18 @@ void setup() {
   String config = preferences.getString("config","{\"config\":{\"data\":[\"cpu_usage[0]\",\"cpu_usage[1]\",\"cpu_usage[2]\",\"cpu_usage[3]\",\"cpu_usage[4]\",\"cpu_usage[5]\",\"cpu_usage[6]\",\"cpu_usage[7]\"],\"brightNess\":50}}");
   if(ssid != "null" && passwd != "null"){
     WiFi.begin(ssid.c_str(),passwd.c_str());
+  }
+
+  //Load Config
+  DynamicJsonDocument jsonDoc(512);
+  DeserializationError error = deserializeJson(jsonDoc, config.c_str());
+  if (error) {
+    Serial.println("Failed to parse JSON");
+  }
+  else{
+    //set strip.SetLuminance(config.brightNess) based on the config
+    strip1.SetLuminance(jsonDoc["config"]["brightNess"].as<int>());
+    strip2.SetLuminance(jsonDoc["config"]["brightNess"].as<int>());
   }
 
   // Setup LED
