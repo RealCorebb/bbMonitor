@@ -111,8 +111,10 @@ void handleWebSocketText(uint8_t *payload, size_t length) {
     }
 }
  else if(jsonDoc.containsKey("config")){
-  //write the entire json.config string to the preferences config
-  preferences.putString("config", jsonDoc["config"].as<String>());
+    //write the entire json.config string to the preferences config
+    strip1.SetLuminance(jsonDoc["config"]["brightNess"].as<int>());
+    strip2.SetLuminance(jsonDoc["config"]["brightNess"].as<int>());
+    preferences.putString("config", jsonDoc["config"].as<String>());  
  }
  else {
     Serial.println("No 'data' key found in JSON");
