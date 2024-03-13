@@ -110,6 +110,10 @@ void handleWebSocketText(uint8_t *payload, size_t length) {
       }
     }
 }
+ else if(jsonDoc.containsKey("config")){
+  //write the entire json.config string to the preferences config
+  preferences.putString("config", jsonDoc["config"].as<String>());
+ }
  else {
     Serial.println("No 'data' key found in JSON");
   }
@@ -149,6 +153,7 @@ void setup() {
   //Setup WiFi
   String ssid = preferences.getString("ssid","Hollyshit_A");
   String passwd = preferences.getString("passwd","00197633");
+  String config = preferences.getString("config","{\"config\":{\"data\":[\"cpu_usage[0]\",\"cpu_usage[1]\",\"cpu_usage[2]\",\"cpu_usage[3]\",\"cpu_usage[4]\",\"cpu_usage[5]\",\"cpu_usage[6]\",\"cpu_usage[7]\"],\"brightNess\":50}}");
   if(ssid != "null" && passwd != "null"){
     WiFi.begin(ssid.c_str(),passwd.c_str());
   }
