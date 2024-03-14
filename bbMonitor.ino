@@ -114,8 +114,6 @@ void handleWebSocketText(uint8_t *payload, size_t length) {
  else if(jsonDoc.containsKey("config")){
     //write the entire json.config string to the preferences config
     luminence = jsonDoc["config"]["brightNess"].as<int>();
-    strip1.Show();
-    strip2.Show();
     preferences.putString("config", jsonDoc["config"].as<String>());  
  }
  else {
@@ -157,7 +155,7 @@ void setup() {
   //Setup WiFi
   String ssid = preferences.getString("ssid","Hollyshit_A");
   String passwd = preferences.getString("passwd","00197633");
-  String config = preferences.getString("config","{\"config\":{\"data\":[\"cpu_usage[0]\",\"cpu_usage[1]\",\"cpu_usage[2]\",\"cpu_usage[3]\",\"cpu_usage[4]\",\"cpu_usage[5]\",\"cpu_usage[6]\",\"cpu_usage[7]\"],\"brightNess\":128}}");
+  String config = preferences.getString("config","{\"config\":{\"data\":[\"cpu_usage[0]\",\"cpu_usage[1]\",\"cpu_usage[2]\",\"cpu_usage[3]\",\"cpu_usage[4]\",\"cpu_usage[5]\",\"cpu_usage[6]\",\"cpu_usage[7]\"],\"brightNess\":192}}");
   if(ssid != "null" && passwd != "null"){
     WiFi.begin(ssid.c_str(),passwd.c_str());
   }
@@ -225,9 +223,9 @@ void setNeoPixelAnimation(int stripIndex, int pixelIndex, float pinValue) {
             strip1.SetPixelColor(pixelIndex + i, color);
           }
       };
-    animations1.StartAnimation(pixelIndex, 1500, animUpdate);
+    animations1.StartAnimation(pixelIndex, 1000, animUpdate);
   } else {
-    animations2.StartAnimation(pixelIndex, 1500, [targetColor, pixelIndex](const AnimationParam& param) {
+    animations2.StartAnimation(pixelIndex, 1000, [targetColor, pixelIndex](const AnimationParam& param) {
       RgbColor color = RgbColor::LinearBlend(strip2.GetPixelColor(pixelIndex), targetColor, param.progress);
       for(int i = 0; i < EACH_PIXEL_COUNT; i ++) {
         strip2.SetPixelColor(pixelIndex + i, color);
