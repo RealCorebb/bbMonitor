@@ -25,7 +25,7 @@
 #define P17 35
 #define P18 36
 const int pins[] = {P1, P2, P3, P4, P5, P6, P7, P8};
-int luminence = 192;
+int luminence = 128;
 
 #define LINES 2
 #define EACH_PIXEL_COUNT 2
@@ -155,7 +155,7 @@ void setup() {
   //Setup WiFi
   String ssid = preferences.getString("ssid","Hollyshit_A");
   String passwd = preferences.getString("passwd","00197633");
-  String config = preferences.getString("config","{\"config\":{\"data\":[\"cpu_usage[0]\",\"cpu_usage[1]\",\"cpu_usage[2]\",\"cpu_usage[3]\",\"cpu_usage[4]\",\"cpu_usage[5]\",\"cpu_usage[6]\",\"cpu_usage[7]\"],\"brightNess\":192}}");
+  String config = preferences.getString("config","{\"config\":{\"data\":[\"cpu_usage[0]\",\"cpu_usage[1]\",\"cpu_usage[2]\",\"cpu_usage[3]\",\"cpu_usage[4]\",\"cpu_usage[5]\",\"cpu_usage[6]\",\"cpu_usage[7]\"],\"brightNess\":128}}");
   if(ssid != "null" && passwd != "null"){
     WiFi.begin(ssid.c_str(),passwd.c_str());
   }
