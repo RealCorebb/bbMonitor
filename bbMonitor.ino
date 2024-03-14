@@ -3,7 +3,7 @@
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
-#include <NeoPixelBusLg.h>
+#include <NeoPixelBus.h>
 #include <NeoPixelAnimator.h>
 
 #define P1 38
@@ -25,6 +25,7 @@
 #define P17 35
 #define P18 36
 const int pins[] = {P1, P2, P3, P4, P5, P6, P7, P8};
+int luminence = 192;
 
 #define LINES 2
 #define EACH_PIXEL_COUNT 2
@@ -34,8 +35,8 @@ int cols = sizeof(pins) / sizeof(pins[0]) / LINES;
 #define STRIP2_PIN    40   // Example pin for strip 2, replace with your actual pin
 #define PIXEL_COUNT   8  // Replace with the actual number of NeoPixels per strip
 
-NeoPixelBusLg<NeoGrbFeature, NeoEsp32Rmt1Ws2812xMethod> strip1(PIXEL_COUNT, STRIP1_PIN);
-NeoPixelBusLg<NeoGrbFeature, NeoEsp32Rmt2Ws2812xMethod> strip2(PIXEL_COUNT, STRIP2_PIN);
+NeoPixelBus<NeoGrbFeature, NeoEsp32Rmt1Ws2812xMethod> strip1(PIXEL_COUNT, STRIP1_PIN);
+NeoPixelBus<NeoGrbFeature, NeoEsp32Rmt2Ws2812xMethod> strip2(PIXEL_COUNT, STRIP2_PIN);
 
 NeoPixelAnimator animations1(PIXEL_COUNT);
 NeoPixelAnimator animations2(PIXEL_COUNT);
@@ -112,8 +113,7 @@ void handleWebSocketText(uint8_t *payload, size_t length) {
 }
  else if(jsonDoc.containsKey("config")){
     //write the entire json.config string to the preferences config
-    strip1.SetLuminance(jsonDoc["config"]["brightNess"].as<int>());
-    strip2.SetLuminance(jsonDoc["config"]["brightNess"].as<int>());
+    luminence = jsonDoc["config"]["brightNess"].as<int>();
     strip1.Show();
     strip2.Show();
     preferences.putString("config", jsonDoc["config"].as<String>());  
@@ -169,15 +169,13 @@ void setup() {
     Serial.println("Failed to parse JSON");
   }
   else{
-    //set strip.SetLuminance(config.brightNess) based on the config
-    strip1.SetLuminance(jsonDoc["config"]["brightNess"].as<int>());
-    strip2.SetLuminance(jsonDoc["config"]["brightNess"].as<int>());
+    luminence = jsonDoc["config"]["brightNess"].as<int>();
   }
 
   // Setup LED
   strip1.Begin();
   strip2.Begin();
-  RgbColor color = RgbColor(25, 25, 255);
+  RgbColor color = RgbColor(25, 25, luminence);
   for(int i = 0; i < PIXEL_COUNT; i ++) {
     strip1.SetPixelColor(i, color);
     strip2.SetPixelColor(i, color);
@@ -212,8 +210,8 @@ void loop() {
 
 void setNeoPixelAnimation(int stripIndex, int pixelIndex, float pinValue) {
   // Define animation parameters
-  RgbColor green(0, 255, 0);
-  RgbColor red(255, 0, 0);
+  RgbColor green(0, luminence, 0);
+  RgbColor red(luminence, 0, 0);
   
   // Calculate color based on pinValue
   RgbColor targetColor = RgbColor::LinearBlend(green, red, pinValue);
