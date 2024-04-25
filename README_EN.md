@@ -4,12 +4,12 @@
 What if the performance monitor from your computer's task manager danced with vintage-style gauges? That's bbMonitor.
 Imagine, as your computer hustles and bustles, the pointer prances around the dashboard like a lively critter; when it's smooth sailing, it sways with finesse. This delightful interaction lets you intuitively grasp what your computer is up to.
 
-🔗[PCB Engineering Files (EasyEDA)](https://oshwhub.com/corebb/bblaser_pro "PCB Engineering Files")  
+🔗[PCB Engineering Files (EasyEDA)](https://oshwhub.com/corebb/bbmonitor "PCB Engineering Files")  
 😄[Detailed Tutorial](https://afdian.net/a/kuruibb "Detailed Tutorial")
 
 🐧QQ Group (for Communication Only): 647186542  
 🐦[Twitter](https://twitter.com/RealCorebb "@RealCorebb") @RealCorebb  
-▶️Video: [Youtube](https://www.youtube.com/watch?v=yFprzIGSGpM "Youtube") [Bilibili](https://www.bilibili.com/video/BV1q14y1W7TJ/ "Bilibili")  
+▶️Video: [Youtube](https://www.youtube.com/watch?v=KMqlBF-dVS4 "Youtube")[ Bilibili](https://www.bilibili.com/video/BV1uM4m1f75z " Bilibili")  
 
 Designed By Corebb With Love From bbREALM!
 
