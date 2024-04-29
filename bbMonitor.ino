@@ -204,6 +204,31 @@ void loop() {
   animations2.UpdateAnimations();
   strip1.Show();
   strip2.Show();
+  if (Serial.available()) {
+    // Read the serial data
+    String serialData = Serial.readStringUntil('\n');
+    
+    // Parse JSON
+    StaticJsonDocument<200> doc;
+    DeserializationError error = deserializeJson(doc, serialData);
+    if (error) {
+      Serial.println("Failed to parse JSON");
+      return;
+    }
+    if (doc.containsKey("ssid") && doc.containsKey("password")) {
+      // Extract SSID and password from JSON
+      const char* ssid = doc["ssid"];
+      const char* password = doc["password"];
+      
+      // Store SSID and password in preferences
+      preferences.putString("ssid", ssid);
+      preferences.putString("passwd", password);
+      
+      // Connect to WiFi
+      WiFi.begin(ssid, password);
+      Serial.println("Connecting to new WiFi...");
+    }
+  }
 }
 
 void setNeoPixelAnimation(int stripIndex, int pixelIndex, float pinValue) {
