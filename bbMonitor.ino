@@ -51,7 +51,7 @@ bool mdnsOn = false;
 AsyncWebServer server(80);
 AsyncWebSocket ws("/");
 
-void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
+void handleWebSocketMessage(void *arg, uint8_t *data, size_t len, AsyncWebSocketClient *client) {
   AwsFrameInfo *info = static_cast<AwsFrameInfo*>(arg);
   static String message;
 
@@ -67,57 +67,63 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
 
   if (info->final) {
     // The final frame has been received, process the message
-    handleWebSocketText((uint8_t *)message.c_str(), message.length());
+    handleWebSocketText((uint8_t *)message.c_str(), message.length(),client);
   }
 }
 
-void handleWebSocketText(uint8_t *payload, size_t length) {
+void handleWebSocketText(uint8_t * payload, size_t length, AsyncWebSocketClient *client) {
   // Parse JSON data
-  DynamicJsonDocument jsonDoc(512);
-  DeserializationError error = deserializeJson(jsonDoc, payload, length);
-
-  if (error) {
-    Serial.println("Failed to parse JSON");
-    return;
+  if (memcmp(payload, "getConfig", sizeof("getConfig") - 1) == 0) {
+     Serial.println("getConfig");
+     client->text(preferences.getString("config"));
   }
+  else{
+    DynamicJsonDocument jsonDoc(512);
+    DeserializationError error = deserializeJson(jsonDoc, payload, length);
 
-  // Check if the "data" key exists
-  if (jsonDoc.containsKey("data")) {
-    JsonArray data = jsonDoc["data"];
-    Serial.println(data);
-    
-    // Iterate through the array and set analogWrite values for defined pins
-    for (int i = 0; i < data.size(); i++) {
-      // Ensure pinIndex is within bounds
-      if (i < sizeof(pins) / sizeof(pins[0])) {
-        float pinValue = data[i].as<float>(); // Extract the value from the array element
-        int pinIndex = i;
-        
-        analogWrite(pins[pinIndex], MAX * pinValue);
-        
-        Serial.print("Set PWM value for Pin ");
-        Serial.print("P" + String(pinIndex + 1)); // Pin names start from P1
-        Serial.print(" to ");
-        Serial.println(pinValue);
-        
-        // Determine the strip and pixel index based on pinIndex
-        int stripIndex = pinIndex < cols ? 0 : 1;
-        int pixelIndex = (pinIndex & cols - 1) * EACH_PIXEL_COUNT;
+    if (error) {
+      //Serial.println("Failed to parse JSON");
+      return;
+    }
 
-        // Set NeoPixel animation based on pinValue
-        setNeoPixelAnimation(stripIndex, pixelIndex, pinValue);
-      } else {
-        Serial.println("Invalid Pin Index: " + String(i));
+    // Check if the "data" key exists
+    if (jsonDoc.containsKey("data")) {
+      JsonArray data = jsonDoc["data"];
+      Serial.println(data);
+      
+      // Iterate through the array and set analogWrite values for defined pins
+      for (int i = 0; i < data.size(); i++) {
+        // Ensure pinIndex is within bounds
+        if (i < sizeof(pins) / sizeof(pins[0])) {
+          float pinValue = data[i].as<float>(); // Extract the value from the array element
+          int pinIndex = i;
+          
+          analogWrite(pins[pinIndex], MAX * pinValue);
+          
+          Serial.print("Set PWM value for Pin ");
+          Serial.print("P" + String(pinIndex + 1)); // Pin names start from P1
+          Serial.print(" to ");
+          Serial.println(pinValue);
+          
+          // Determine the strip and pixel index based on pinIndex
+          int stripIndex = pinIndex < cols ? 0 : 1;
+          int pixelIndex = (pinIndex & cols - 1) * EACH_PIXEL_COUNT;
+
+          // Set NeoPixel animation based on pinValue
+          setNeoPixelAnimation(stripIndex, pixelIndex, pinValue);
+        } else {
+          Serial.println("Invalid Pin Index: " + String(i));
+        }
       }
     }
-}
- else if(jsonDoc.containsKey("config")){
-    //write the entire json.config string to the preferences config
-    luminence = jsonDoc["config"]["brightNess"].as<int>();
-    preferences.putString("config", jsonDoc["config"].as<String>());  
- }
- else {
-    Serial.println("No 'data' key found in JSON");
+    else if(jsonDoc.containsKey("config")){
+        //write the entire json.config string to the preferences config
+        luminence = jsonDoc["config"]["brightNess"].as<int>();
+        preferences.putString("config", jsonDoc["config"].as<String>());  
+    }
+    else {
+        Serial.println("No 'data' key found in JSON");
+    }
   }
 }
 
@@ -132,7 +138,7 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
       Serial.printf("WebSocket client #%u disconnected\n", client->id());
       break;
     case WS_EVT_DATA:
-      handleWebSocketMessage(arg, data, len);
+      handleWebSocketMessage(arg, data, len, client);
       break;
     case WS_EVT_PONG:
     case WS_EVT_ERROR:
