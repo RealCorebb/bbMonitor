@@ -75,7 +75,9 @@ void handleWebSocketText(uint8_t * payload, size_t length, AsyncWebSocketClient 
   // Parse JSON data
   if (memcmp(payload, "getConfig", sizeof("getConfig") - 1) == 0) {
      Serial.println("getConfig");
-     client->text(preferences.getString("config"));
+     String config_current = preferences.getString("config","{\"config\":{\"data\":[\"cpu_usage[0]\",\"cpu_usage[1]\",\"cpu_usage[2]\",\"cpu_usage[3]\",\"cpu_usage[4]\",\"cpu_usage[5]\",\"cpu_usage[6]\",\"cpu_usage[7]\"],\"brightNess\":128,\"smoothTime\":0}}");
+     Serial.println(config_current);
+     client->text(config_current);
   }
   else{
     DynamicJsonDocument jsonDoc(512);
@@ -147,6 +149,7 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
 }
 
 void setup() {
+  preferences.begin("bbMonitor", false);
   Serial.begin(115200);
   // put your setup code here, to run once:
   pinMode(P1,OUTPUT);
@@ -161,8 +164,11 @@ void setup() {
   //Setup WiFi
   String ssid = preferences.getString("ssid","Hollyshit_A");
   String passwd = preferences.getString("passwd","00197633");
-  String config = preferences.getString("config","{\"config\":{\"data\":[\"cpu_usage[0]\",\"cpu_usage[1]\",\"cpu_usage[2]\",\"cpu_usage[3]\",\"cpu_usage[4]\",\"cpu_usage[5]\",\"cpu_usage[6]\",\"cpu_usage[7]\"],\"brightNess\":128}}");
+  String config = preferences.getString("config","{\"config\":{\"data\":[\"cpu_usage[0]\",\"cpu_usage[1]\",\"cpu_usage[2]\",\"cpu_usage[3]\",\"cpu_usage[4]\",\"cpu_usage[5]\",\"cpu_usage[6]\",\"cpu_usage[7]\"],\"brightNess\":128,\"smoothTime\":0}}");
   if(ssid != "null" && passwd != "null"){
+    Serial.println("WiFi:");
+    Serial.println(ssid);
+    Serial.println(passwd);
     WiFi.begin(ssid.c_str(),passwd.c_str());
   }
 
@@ -191,6 +197,8 @@ void setup() {
   ws.onEvent(onEvent);
   server.addHandler(&ws);
   server.begin();
+
+  Serial.println("bbMonitor Setup Done");
 }
 
 void setupMDNS(){
@@ -231,8 +239,10 @@ void loop() {
       preferences.putString("passwd", password);
       
       // Connect to WiFi
+      Serial.print("Connecting to new WiFi...");
+      WiFi.disconnect();
       WiFi.begin(ssid, password);
-      Serial.println("Connecting to new WiFi...");
+      
     }
   }
 }
