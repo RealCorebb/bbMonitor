@@ -5,6 +5,7 @@
 #include <ArduinoJson.h>
 #include <NeoPixelBus.h>
 #include <NeoPixelAnimator.h>
+#include <Ticker.h>
 
 #define P1 38
 #define P2 5
@@ -26,6 +27,7 @@
 #define P18 36
 const int pins[] = {P1, P2, P3, P4, P5, P6, P7, P8};
 int luminence = 128;
+int smoothTime = 0;
 
 #define LINES 2
 #define EACH_PIXEL_COUNT 2
@@ -56,6 +58,8 @@ int currentPWMValues[sizeof(pins) / sizeof(pins[0])]; // Array to store current 
 unsigned long smoothStartTime;
 
 DynamicJsonDocument jsonDoc(512);
+
+Ticker meter;
 
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len, AsyncWebSocketClient *client) {
   AwsFrameInfo *info = static_cast<AwsFrameInfo*>(arg);
@@ -127,7 +131,10 @@ void handleWebSocketText(uint8_t * payload, size_t length, AsyncWebSocketClient 
     else if(jsonDoc.containsKey("config")){
         //write the entire json.config string to the preferences config
         luminence = jsonDoc["config"]["brightNess"].as<int>();
-        preferences.putString("config", jsonDoc["config"].as<String>());  
+        smoothTime = jsonDoc["config"]["smoothTime"].as<int>();
+        String jsonString;
+        serializeJson(jsonDoc, jsonString);
+        preferences.putString("config", jsonString);  
     }
     else {
         Serial.println("No 'data' key found in JSON");
@@ -185,6 +192,7 @@ void setup() {
   }
   else{
     luminence = jsonDoc["config"]["brightNess"].as<int>();
+    smoothTime = jsonDoc["config"]["smoothTime"].as<int>();
   }
 
   // Setup LED
@@ -203,6 +211,8 @@ void setup() {
   server.addHandler(&ws);
   server.begin();
 
+  meter.attach(0.01,tickMeter);  //Update Meter @100Hz
+
   Serial.println("bbMonitor Setup Done");
 }
 
@@ -214,6 +224,23 @@ void setupMDNS(){
       MDNS.addService("bbMonitor", "tcp", 80);
       mdnsOn = true;
     }
+}
+
+void tickMeter(){
+  unsigned long currentTime = millis();
+
+  for (int i = 0; i < sizeof(pins) / sizeof(pins[0]); i++) {
+    int targetValue = targetPWMValues[i];
+    int currentValue = currentPWMValues[i];
+
+    float progress = (smoothTime > 0) ? float(currentTime - smoothStartTime) / smoothTime : 1.0;
+    if(progress > 1.0) progress = 1.0;
+    int newValue = currentValue + (targetValue - currentValue) * progress;
+    analogWrite(pins[i], newValue);
+    if(progress == 1.0){   //transition done
+      currentPWMValues[i] = targetPWMValues[i];
+    }
+  }
 }
 
 void loop() {
@@ -248,22 +275,6 @@ void loop() {
       WiFi.disconnect();
       WiFi.begin(ssid, password);
       
-    }
-  }
-
-  unsigned long currentTime = millis();
-
-  int smoothTime = jsonDoc["config"]["smoothTime"].as<int>();
-  for (int i = 0; i < sizeof(pins) / sizeof(pins[0]); i++) {
-    int targetValue = targetPWMValues[i];
-    int currentValue = currentPWMValues[i];
-    
-    float progress = (smoothTime > 0) ? float(currentTime - smoothStartTime) / smoothTime : 1.0;
-    if(progress > 1.0) progress = 1.0;
-    int newValue = currentValue + (targetValue - currentValue) * progress;
-    analogWrite(pins[i], newValue);
-    if(progress == 1.0){   //transition done
-      currentPWMValues[i] = targetPWMValues[i];
     }
   }
 }
