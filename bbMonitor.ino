@@ -51,6 +51,12 @@ bool mdnsOn = false;
 AsyncWebServer server(80);
 AsyncWebSocket ws("/");
 
+int targetPWMValues[sizeof(pins) / sizeof(pins[0])]; // Array to store target PWM values for pins
+int currentPWMValues[sizeof(pins) / sizeof(pins[0])]; // Array to store current PWM values for pins
+unsigned long smoothStartTime;
+
+DynamicJsonDocument jsonDoc(512);
+
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len, AsyncWebSocketClient *client) {
   AwsFrameInfo *info = static_cast<AwsFrameInfo*>(arg);
   static String message;
@@ -80,7 +86,6 @@ void handleWebSocketText(uint8_t * payload, size_t length, AsyncWebSocketClient 
      client->text(config_current);
   }
   else{
-    DynamicJsonDocument jsonDoc(512);
     DeserializationError error = deserializeJson(jsonDoc, payload, length);
 
     if (error) {
@@ -94,14 +99,15 @@ void handleWebSocketText(uint8_t * payload, size_t length, AsyncWebSocketClient 
       Serial.println(data);
       
       // Iterate through the array and set analogWrite values for defined pins
+      smoothStartTime = millis();
       for (int i = 0; i < data.size(); i++) {
         // Ensure pinIndex is within bounds
         if (i < sizeof(pins) / sizeof(pins[0])) {
           float pinValue = data[i].as<float>(); // Extract the value from the array element
           int pinIndex = i;
           
-          analogWrite(pins[pinIndex], MAX * pinValue);
-          
+          targetPWMValues[i] = MAX * pinValue;
+
           Serial.print("Set PWM value for Pin ");
           Serial.print("P" + String(pinIndex + 1)); // Pin names start from P1
           Serial.print(" to ");
@@ -173,7 +179,6 @@ void setup() {
   }
 
   //Load Config
-  DynamicJsonDocument jsonDoc(512);
   DeserializationError error = deserializeJson(jsonDoc, config.c_str());
   if (error) {
     Serial.println("Failed to parse JSON");
@@ -243,6 +248,22 @@ void loop() {
       WiFi.disconnect();
       WiFi.begin(ssid, password);
       
+    }
+  }
+
+  unsigned long currentTime = millis();
+
+  int smoothTime = jsonDoc["config"]["smoothTime"].as<int>();
+  for (int i = 0; i < sizeof(pins) / sizeof(pins[0]); i++) {
+    int targetValue = targetPWMValues[i];
+    int currentValue = currentPWMValues[i];
+    
+    float progress = (smoothTime > 0) ? float(currentTime - smoothStartTime) / smoothTime : 1.0;
+    if(progress > 1.0) progress = 1.0;
+    int newValue = currentValue + (targetValue - currentValue) * progress;
+    analogWrite(pins[i], newValue);
+    if(progress == 1.0){   //transition done
+      currentPWMValues[i] = targetPWMValues[i];
     }
   }
 }
