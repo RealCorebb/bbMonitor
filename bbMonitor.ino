@@ -6,6 +6,7 @@
 #include <NeoPixelBus.h>
 #include <NeoPixelAnimator.h>
 #include <Ticker.h>
+#include <esp_log.h>
 
 #define P1 38
 #define P2 5
@@ -63,6 +64,7 @@ DynamicJsonDocument jsonDoc(512);
 
 Ticker meter;
 Ticker configuring;
+Ticker ipStatus;
 
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len, AsyncWebSocketClient *client) {
   AwsFrameInfo *info = static_cast<AwsFrameInfo*>(arg);
@@ -86,20 +88,19 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len, AsyncWebSocket
 
 void resetConfigingAnimation(){
   isConfigingAnimation = false;
-  Serial.println("reset isConfigingAnimation");
+  ESP_LOGV("bbMonitor","reset isConfigingAnimation");
 }
 
 
 void handleWebSocketText(uint8_t * payload, size_t length, AsyncWebSocketClient *client) {
   // Parse JSON data
   if (memcmp(payload, "getConfig", sizeof("getConfig") - 1) == 0) {
-     Serial.println("getConfig");
+     ESP_LOGV("bbMonitor","getConfig");
      String config_current = preferences.getString("config","{\"config\":{\"data\":[\"cpu_usage[0]\",\"cpu_usage[1]\",\"cpu_usage[2]\",\"cpu_usage[3]\",\"cpu_usage[4]\",\"cpu_usage[5]\",\"cpu_usage[6]\",\"cpu_usage[7]\"],\"brightNess\":128,\"smoothTime\":0}}");
-     Serial.println(config_current);
      client->text(config_current);
   }
   else if(memcmp(payload, "configuring", sizeof("configuring") - 1) == 0){
-    Serial.println("configuring");
+    ESP_LOGV("bbMonitor","configuring");
     setConfigAnimation();
     configuring.once(2,resetConfigingAnimation);
   }
@@ -107,14 +108,13 @@ void handleWebSocketText(uint8_t * payload, size_t length, AsyncWebSocketClient 
     DeserializationError error = deserializeJson(jsonDoc, payload, length);
 
     if (error) {
-      //Serial.println("Failed to parse JSON");
+      ESP_LOGV("bbMonitor","Failed to parse JSON");
       return;
     }
 
     // Check if the "data" key exists
     if (jsonDoc.containsKey("data")) {
       JsonArray data = jsonDoc["data"];
-      Serial.println(data);
       
       // Iterate through the array and set analogWrite values for defined pins
       smoothStartTime = millis();
@@ -126,10 +126,7 @@ void handleWebSocketText(uint8_t * payload, size_t length, AsyncWebSocketClient 
           
           targetPWMValues[i] = MAX * pinValue;
 
-          Serial.print("Set PWM value for Pin ");
-          Serial.print("P" + String(pinIndex + 1)); // Pin names start from P1
-          Serial.print(" to ");
-          Serial.println(pinValue);
+          ESP_LOGV("bbMonitor","Set PWM value for Pin ");
           
           // Determine the strip and pixel index based on pinIndex
           int stripIndex = pinIndex < cols ? 0 : 1;
@@ -138,7 +135,7 @@ void handleWebSocketText(uint8_t * payload, size_t length, AsyncWebSocketClient 
           // Set NeoPixel animation based on pinValue
           setNeoPixelAnimation(stripIndex, pixelIndex, pinValue);
         } else {
-          Serial.println("Invalid Pin Index: " + String(i));
+          ESP_LOGV("bbMonitor","Invalid Pin Index");
         }
       }
     }
@@ -151,7 +148,7 @@ void handleWebSocketText(uint8_t * payload, size_t length, AsyncWebSocketClient 
         preferences.putString("config", jsonString);  
     }
     else {
-        Serial.println("No 'data' key found in JSON");
+        ESP_LOGV("bbMonitor","No 'data' key found in JSON");
     }
   }
 }
@@ -160,11 +157,9 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
              void *arg, uint8_t *data, size_t len) {
   switch (type) {
     case WS_EVT_CONNECT:
-      Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
       ws.cleanupClients();
       break;
     case WS_EVT_DISCONNECT:
-      Serial.printf("WebSocket client #%u disconnected\n", client->id());
       break;
     case WS_EVT_DATA:
       handleWebSocketMessage(arg, data, len, client);
@@ -193,16 +188,13 @@ void setup() {
   String passwd = preferences.getString("passwd","00197633");
   String config = preferences.getString("config","{\"config\":{\"data\":[\"cpu_usage[0]\",\"cpu_usage[1]\",\"cpu_usage[2]\",\"cpu_usage[3]\",\"cpu_usage[4]\",\"cpu_usage[5]\",\"cpu_usage[6]\",\"cpu_usage[7]\"],\"brightNess\":128,\"smoothTime\":0}}");
   if(ssid != "null" && passwd != "null"){
-    Serial.println("WiFi:");
-    Serial.println(ssid);
-    Serial.println(passwd);
     WiFi.begin(ssid.c_str(),passwd.c_str());
   }
 
   //Load Config
   DeserializationError error = deserializeJson(jsonDoc, config.c_str());
   if (error) {
-    Serial.println("Failed to parse JSON");
+    ESP_LOGV("bbMonitor","Failed to parse JSON");
   }
   else{
     luminence = jsonDoc["config"]["brightNess"].as<int>();
@@ -226,13 +218,30 @@ void setup() {
   server.begin();
 
   meter.attach(0.01,tickMeter);  //Update Meter @100Hz
+  ipStatus.attach(1,printIP);  //print IP @1Hz
+  ESP_LOGV("bbMonitor","bbMonitor Setup Done");
+}
 
-  Serial.println("bbMonitor Setup Done");
+void printIP() {
+  DynamicJsonDocument docIP(256); // Create a JSON document
+
+  // Get the local IP address
+  String ip = WiFi.localIP().toString();
+
+  // Add the IP address to the JSON document
+  docIP["ip"] = ip;
+
+  // Serialize the JSON document to a string
+  String serialized;
+  serializeJson(docIP, serialized);
+
+  // Print the serialized JSON
+  Serial.println(serialized);
 }
 
 void setupMDNS(){
   if (!MDNS.begin("bbMonitor")) {
-        Serial.println("Error setting up MDNS responder!");
+        ESP_LOGV("bbMonitor","Error setting up MDNS responder!");
     }
     else{
       MDNS.addService("bbMonitor", "tcp", 80);
@@ -273,7 +282,7 @@ void loop() {
     StaticJsonDocument<200> doc;
     DeserializationError error = deserializeJson(doc, serialData);
     if (error) {
-      Serial.println("Failed to parse JSON");
+      ESP_LOGV("bbMonitor","Failed to parse JSON");
       return;
     }
     if (doc.containsKey("ssid") && doc.containsKey("password")) {
@@ -286,7 +295,7 @@ void loop() {
       preferences.putString("passwd", password);
       
       // Connect to WiFi
-      Serial.print("Connecting to new WiFi...");
+      ESP_LOGV("bbMonitor","Connecting to new WiFi...");
       WiFi.disconnect();
       WiFi.begin(ssid, password);
       
