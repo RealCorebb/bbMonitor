@@ -28,6 +28,7 @@
 const int pins[] = {P1, P2, P3, P4, P5, P6, P7, P8};
 int luminence = 128;
 int smoothTime = 0;
+bool isConfigingAnimation = false;
 
 #define LINES 2
 #define EACH_PIXEL_COUNT 2
@@ -42,6 +43,7 @@ NeoPixelBus<NeoGrbFeature, NeoEsp32Rmt2Ws2812xMethod> strip2(PIXEL_COUNT, STRIP2
 
 NeoPixelAnimator animations1(PIXEL_COUNT);
 NeoPixelAnimator animations2(PIXEL_COUNT);
+NeoPixelAnimator animationsConfig(PIXEL_COUNT);
 
 AnimEaseFunction easing = NeoEase::CubicIn;
 
@@ -60,6 +62,7 @@ unsigned long smoothStartTime;
 DynamicJsonDocument jsonDoc(512);
 
 Ticker meter;
+Ticker configuring;
 
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len, AsyncWebSocketClient *client) {
   AwsFrameInfo *info = static_cast<AwsFrameInfo*>(arg);
@@ -81,6 +84,12 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len, AsyncWebSocket
   }
 }
 
+void resetConfigingAnimation(){
+  isConfigingAnimation = false;
+  Serial.println("reset isConfigingAnimation");
+}
+
+
 void handleWebSocketText(uint8_t * payload, size_t length, AsyncWebSocketClient *client) {
   // Parse JSON data
   if (memcmp(payload, "getConfig", sizeof("getConfig") - 1) == 0) {
@@ -88,6 +97,11 @@ void handleWebSocketText(uint8_t * payload, size_t length, AsyncWebSocketClient 
      String config_current = preferences.getString("config","{\"config\":{\"data\":[\"cpu_usage[0]\",\"cpu_usage[1]\",\"cpu_usage[2]\",\"cpu_usage[3]\",\"cpu_usage[4]\",\"cpu_usage[5]\",\"cpu_usage[6]\",\"cpu_usage[7]\"],\"brightNess\":128,\"smoothTime\":0}}");
      Serial.println(config_current);
      client->text(config_current);
+  }
+  else if(memcmp(payload, "configuring", sizeof("configuring") - 1) == 0){
+    Serial.println("configuring");
+    setConfigAnimation();
+    configuring.once(2,resetConfigingAnimation);
   }
   else{
     DeserializationError error = deserializeJson(jsonDoc, payload, length);
@@ -248,6 +262,7 @@ void loop() {
   if(!mdnsOn) setupMDNS();
   animations1.UpdateAnimations();
   animations2.UpdateAnimations();
+  animationsConfig.UpdateAnimations();
   strip1.Show();
   strip2.Show();
   if (Serial.available()) {
@@ -279,30 +294,59 @@ void loop() {
   }
 }
 
+uint16_t hue = 0;
+unsigned long lastUpdate = 0;
+int animationInterval = 10; // Adjust animation speed here
+
+void setConfigAnimation() {
+  // Implement your rainbow loop animation here
+  isConfigingAnimation = true;
+  animationsConfig.StartAnimation(0, 2000, [=](const AnimationParam& param) {
+
+      int hue = (param.progress * 360);
+
+            for (int i = 0; i < PIXEL_COUNT; i++) {
+              float pixelHue = static_cast<float>(hue + (i * 360 / PIXEL_COUNT)) / 360.0f;
+              strip1.SetPixelColor(i, HsbColor(pixelHue, 1.0f, 1.0f));
+            }
+
+            for (int i = 0; i < PIXEL_COUNT; i++) {
+              float pixelHue = static_cast<float>(hue + (i * 360 / PIXEL_COUNT)) / 360.0f;
+              strip2.SetPixelColor(i, HsbColor(pixelHue, 1.0f, 1.0f));
+            }
+
+            strip1.Show();
+            strip2.Show();
+      });
+}
+
+
 void setNeoPixelAnimation(int stripIndex, int pixelIndex, float pinValue) {
-  // Define animation parameters
-  RgbColor green(0, luminence, 0);
-  RgbColor red(luminence, 0, 0);
-  
-  // Calculate color based on pinValue
-  RgbColor targetColor = RgbColor::LinearBlend(green, red, pinValue);
-  // Set animation
-  if (stripIndex == 0) {
-    AnimUpdateCallback animUpdate = [=](const AnimationParam& param)
-      {
-          float progress = easing(param.progress);
-          RgbColor color = RgbColor::LinearBlend(strip1.GetPixelColor(pixelIndex), targetColor, progress);
-          for(int i = 0; i < EACH_PIXEL_COUNT; i ++) {
-            strip1.SetPixelColor(pixelIndex + i, color);
-          }
-      };
-    animations1.StartAnimation(pixelIndex, 1000, animUpdate);
-  } else {
-    animations2.StartAnimation(pixelIndex, 1000, [targetColor, pixelIndex](const AnimationParam& param) {
-      RgbColor color = RgbColor::LinearBlend(strip2.GetPixelColor(pixelIndex), targetColor, param.progress);
-      for(int i = 0; i < EACH_PIXEL_COUNT; i ++) {
-        strip2.SetPixelColor(pixelIndex + i, color);
-      }
-    });
+  if(isConfigingAnimation == false){
+    // Define animation parameters
+    RgbColor green(0, luminence, 0);
+    RgbColor red(luminence, 0, 0);
+    
+    // Calculate color based on pinValue
+    RgbColor targetColor = RgbColor::LinearBlend(green, red, pinValue);
+    // Set animation
+    if (stripIndex == 0) {
+      AnimUpdateCallback animUpdate = [=](const AnimationParam& param)
+        {
+            float progress = easing(param.progress);
+            RgbColor color = RgbColor::LinearBlend(strip1.GetPixelColor(pixelIndex), targetColor, progress);
+            for(int i = 0; i < EACH_PIXEL_COUNT; i ++) {
+              strip1.SetPixelColor(pixelIndex + i, color);
+            }
+        };
+      animations1.StartAnimation(pixelIndex, 1000, animUpdate);
+    } else {
+      animations2.StartAnimation(pixelIndex, 1000, [targetColor, pixelIndex](const AnimationParam& param) {
+        RgbColor color = RgbColor::LinearBlend(strip2.GetPixelColor(pixelIndex), targetColor, param.progress);
+        for(int i = 0; i < EACH_PIXEL_COUNT; i ++) {
+          strip2.SetPixelColor(pixelIndex + i, color);
+        }
+      });
+    }
   }
 }
