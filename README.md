@@ -5,7 +5,7 @@
 想象一下，当你的电脑忙碌时，指针就像是一只活泼的小动物一样在仪表盘上跳跃；当它运行顺畅时，指针则轻盈地舞动。这种奇妙的互动，让你能够更直观地感受到你的电脑在做什么。
 
 🔗[PCB工程文件地址(EasyEDA)](https://oshwhub.com/corebb/bbmonitor "PCB工程文件地址")  
-😄[更详细的教程](https://afdian.net/a/kuruibb "更详细的教程")
+😄[以往更详细的教程](https://afdian.net/a/kuruibb "更详细的教程")
 
 🐧QQ群（仅供交流）：647186542  
 🐦[Twitter](https://twitter.com/RealCorebb "@RealCorebb") @RealCorebb  
@@ -21,4 +21,9 @@ Designed By Corebb With Love From bbREALM!
 
 # 关于桌面软件：  
 这个软件称之为bbHome，是我为我自己做的东西做的一个平台，目前只有bbMonitor的设备。
-目前还处于BETA阶段，下载地址：待定
+相关地址：https://www.bbrealm.com  
+
+# 购买方式：  
+本项目为开源的，你可以自己制作，也可以购买成品支持我的创作  
+已上架的平台：Bilibili工房 [链接](https://gf.bilibili.com/item/detail/1106032122)  
+计划上架的平台：淘宝、Tindie  
