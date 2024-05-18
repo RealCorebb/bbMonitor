@@ -25,5 +25,5 @@ Designed By Corebb With Love From bbREALM!
 
 # 购买方式：  
 本项目为开源的，你可以自己制作，也可以购买成品支持我的创作  
-已上架的平台：Bilibili工房 [链接](https://gf.bilibili.com/item/detail/1106032122)  
-计划上架的平台：淘宝、Tindie  
+已上架的平台：Bilibili工房 [链接](https://gf.bilibili.com/item/detail/1106032122) 、 淘宝 [链接](https://item.taobao.com/item.htm?abbucket=15&id=797425604374)
+计划上架的平台：Tindie  
