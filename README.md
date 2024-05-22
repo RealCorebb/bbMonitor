@@ -26,6 +26,6 @@ Designed By Corebb With Love From bbREALM!
 # 购买方式：  
 本项目为开源的，你可以自己制作，也可以购买成品支持我的创作  
 已上架的平台：Bilibili工房 [链接](https://gf.bilibili.com/item/detail/1106032122) 、 淘宝 [链接](https://item.taobao.com/item.htm?abbucket=15&id=797425604374)  、 Tindie [链接](https://www.tindie.com/products/bbrealm/bbmonitor/)  
-[![Bilibili](https://www.bbrealm.com/images/bilibili-gf.png)](https://gf.bilibili.com/item/detail/1106032122)
-[![Taobao](https://www.bbrealm.com/images/taobao.png)](https://item.taobao.com/item.htm?abbucket=3&id=797425604374&ns=1)
+[![Bilibili](https://www.bbrealm.com/images/bilibili-gf2.png)](https://gf.bilibili.com/item/detail/1106032122)
+[![Taobao](https://www.bbrealm.com/images/taobao2.png)](https://item.taobao.com/item.htm?abbucket=3&id=797425604374&ns=1)
 [![I sell on Tindie](https://d2ss6ovg47m0r5.cloudfront.net/badges/tindie-larges.png)](https://www.tindie.com/stores/bbrealm/?ref=offsite_badges&utm_source=sellers_Corebbd&utm_medium=badges&utm_campaign=badge_large)
