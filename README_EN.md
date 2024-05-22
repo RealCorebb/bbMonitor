@@ -20,4 +20,11 @@ Designed By Corebb With Love From bbREALM!
 
 # About Desktop Software:  
 This software is called bbHome, a platform I've created for myself, currently only supporting bbMonitor devices.
-It's currently in the BETA stage. Download link: TBD
+You can find that on my website: https://www.bbrealm.com
+
+#Buy it to support me:
+Available at：Bilibili [Link](https://gf.bilibili.com/item/detail/1106032122) 、 Taobao [Link](https://item.taobao.com/item.htm?abbucket=15&id=797425604374)  、 Tindie [Link](https://www.tindie.com/products/bbrealm/bbmonitor/)  
+[![Bilibili](https://www.bbrealm.com/images/bilibili-gf2.png)](https://gf.bilibili.com/item/detail/1106032122)
+[![Taobao](https://www.bbrealm.com/images/taobao2.png)](https://item.taobao.com/item.htm?abbucket=3&id=797425604374&ns=1)
+[![I sell on Tindie](https://d2ss6ovg47m0r5.cloudfront.net/badges/tindie-larges.png)](https://www.tindie.com/stores/bbrealm/?ref=offsite_badges&utm_source=sellers_Corebbd&utm_medium=badges&utm_campaign=badge_large)
+
