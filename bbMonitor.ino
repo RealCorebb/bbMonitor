@@ -218,10 +218,11 @@ void setup() {
   server.begin();
 
   meter.attach(0.01,tickMeter);  //Update Meter @100Hz
-  ipStatus.attach(1,printIP);  //print IP @1Hz
+  //ipStatus.attach(1,printIP);  //print IP @1Hz
   ESP_LOGV("bbMonitor","bbMonitor Setup Done");
 }
 
+int retryTimes = 0;
 void printIP() {
   DynamicJsonDocument docIP(256); // Create a JSON document
 
@@ -237,6 +238,11 @@ void printIP() {
 
   // Print the serialized JSON
   Serial.println(serialized);
+  retryTimes ++;
+  if(ip != "0.0.0.0" || retryTimes >= 3){
+    ipStatus.detach();
+    retryTimes = 0;
+  }
 }
 
 void setupMDNS(){
@@ -279,7 +285,7 @@ void loop() {
     String serialData = Serial.readStringUntil('\n');
     
     // Parse JSON
-    StaticJsonDocument<200> doc;
+    StaticJsonDocument<512> doc;
     DeserializationError error = deserializeJson(doc, serialData);
     if (error) {
       ESP_LOGV("bbMonitor","Failed to parse JSON");
@@ -298,7 +304,54 @@ void loop() {
       ESP_LOGV("bbMonitor","Connecting to new WiFi...");
       WiFi.disconnect();
       WiFi.begin(ssid, password);
+      ipStatus.attach(3,printIP);
+    }
+    else if (doc.containsKey("data")){
+      JsonArray data = doc["data"];
       
+      // Iterate through the array and set analogWrite values for defined pins
+      smoothStartTime = millis();
+      for (int i = 0; i < data.size(); i++) {
+        // Ensure pinIndex is within bounds
+        if (i < sizeof(pins) / sizeof(pins[0])) {
+          float pinValue = data[i].as<float>(); // Extract the value from the array element
+          int pinIndex = i;
+          
+          targetPWMValues[i] = MAX * pinValue;
+
+          ESP_LOGV("bbMonitor","Set PWM value for Pin ");
+          
+          // Determine the strip and pixel index based on pinIndex
+          int stripIndex = pinIndex < cols ? 0 : 1;
+          int pixelIndex = (pinIndex & cols - 1) * EACH_PIXEL_COUNT;
+
+          // Set NeoPixel animation based on pinValue
+          setNeoPixelAnimation(stripIndex, pixelIndex, pinValue);
+        } else {
+          ESP_LOGV("bbMonitor","Invalid Pin Index");
+        }
+      }
+    }
+    else if (doc.containsKey("config")){
+      luminence = doc["config"]["brightNess"].as<int>();
+      smoothTime = doc["config"]["smoothTime"].as<int>();
+      String jsonString;
+      serializeJson(doc, jsonString);
+      preferences.putString("config", jsonString);  
+    }
+    else if (doc.containsKey("command")){
+      const char* command = doc["command"];
+      if (strcmp(command, "getId") == 0) {
+        Serial.println("{\"Id\":\"bbMonitor\"}");
+      }
+      else if(strcmp(command, "getConfig") == 0) {
+        String config_current = preferences.getString("config", "{\"config\":{\"data\":[\"cpu_usage[0]\",\"cpu_usage[1]\",\"cpu_usage[2]\",\"cpu_usage[3]\",\"cpu_usage[4]\",\"cpu_usage[5]\",\"cpu_usage[6]\",\"cpu_usage[7]\"],\"brightNess\":128,\"smoothTime\":0}}");
+        Serial.println(config_current);
+      }
+      else if(strcmp(command, "configuring") == 0) {
+        setConfigAnimation();
+        configuring.once(2,resetConfigingAnimation);
+      }
     }
   }
 }
